@@ -16,9 +16,16 @@
 #
 import webapp2
 import cgi
+import re
+
 
 header ="<h3>Sign&#45;Up</h3>"
 errorcolor = "style = 'color:red'"
+USER_RE = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
+PASS_RE = re.compile(r"^.{3,20}$")
+EMAIL_RE = re.compile(r"^[\S]+@[\S]+.[\S]+$")
+
+
 class MainHandler(webapp2.RequestHandler):
     def get(self):
         passerror = self.request.get('passerror')
@@ -75,29 +82,39 @@ class MainHandler(webapp2.RequestHandler):
         self.response.write(page)
 
 class SignedUp(webapp2.RequestHandler):
+    def valid_username(self,username):
+        return USER_RE.match(username)
+    def valid_password(self,password):
+        return PASS_RE.match(password)
+    def valid_email(self,email):
+        return EMAIL_RE.match(email)
     def post(self):
         username = self.request.get('username')
         pass1 = self.request.get('password1')
         pass2 = self.request.get('password2')
         email = self.request.get('email')
         error = "/?"
-        if not username or not pass1 or not pass2 or not email:
+        if not self.valid_username(username):
+            error += "usernameerror=Invalid Username&"
+        if not self.valid_password(pass1):
+            error += "passerror=Invalid password was used&"
+        if not username or not pass1 or not pass2:
             if not username:
                 error += "usernameerror=No username given&"
             if not pass1 or not pass2:
                 error += "passmiss=No password was given&"
-            if not email:
-                error += "emailerror=No email given&"
-            if '@' not in email or '.' not in email:
-                error += "emailerror=Invalid Email address"
         if pass1 and pass2:
             if pass1 != pass2:
                 error += "passerror=Passwords don't match&"
         if ' ' in username:
             error += "usernameerror=No spaces allowed&"
+        if len(email)>0 and not self.valid_email(email):
+            error += "emailerror=Invalid Email&"
         if len(error) > 2:
-            if username and email:
-                error += "username=" + username + "&email=" + email + "&"
+            if username:
+                error += "username=" + username + "&"
+            if email:
+                error += "&email=" + email + "&"
             self.redirect(error)
 
         body = """
